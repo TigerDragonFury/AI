@@ -1,0 +1,29 @@
+{
+  "name": "@apps/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@packages/shared": "0.1.0",
+    "@sentry/nextjs": "^10.39.0",
+    "@supabase/supabase-js": "2.49.1",
+    "bullmq": "^5.0.0",
+    "next": "15.1.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "recharts": "^3.7.0",
+    "resend": "^6.9.2",
+    "stripe": "^20.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "typescript": "5.7.2"
+  }
+}

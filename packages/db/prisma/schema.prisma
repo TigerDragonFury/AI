@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  queued
+  processing
+  awaiting_approval
+  approved
+  published
+  failed
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  role           String           @default("customer")
+  subscription   UserSubscription?
+  organizations  Organization[]
+  jobs           Job[]
+  publishedPosts PublishedPostGroup[]
+  adCampaigns    AdCampaign[]
+  analytics      Analytics[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model UserSubscription {
+  userId     String   @id
+  plan       String   @default("free")
+  status     String   @default("trial")
+  credits    Float    @default(0)
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+  projects    Project[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id              String          @id @default(cuid())
+  organizationId  String
+  name            String
+  organization    Organization    @relation(fields: [organizationId], references: [id])
+  jobs            Job[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Job {
+  id                String          @id @default(cuid())
+  userId            String?
+  projectId         String?
+  status            JobStatus       @default(queued)
+  personSourceType  String
+  personSourceName  String
+  personSourceUrl   String?
+  productPhotoName  String?
+  productPhotoUrl   String?
+  productDescription String?
+  tone              String?
+  targetPlatforms   String[]        @default([])
+  generatedVideoUrl String?
+  caption           String?
+  title             String?
+  user              User?           @relation(fields: [userId], references: [id])
+  project           Project?        @relation(fields: [projectId], references: [id])
+  publishedPosts    PublishedPost[]
+  publishedGroups   PublishedPostGroup[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model PublishedPostGroup {
+  id          String      @id @default(cuid())
+  userId      String
+  jobId       String
+  platforms   String[]    @default([])
+  status      String      @default("published")
+  scheduleAt  DateTime?
+  user        User        @relation(fields: [userId], references: [id])
+  job         Job         @relation(fields: [jobId], references: [id])
+  adCampaigns AdCampaign[]
+  analytics   Analytics[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model PublishedPost {
+  id            String      @id @default(cuid())
+  jobId         String
+  platform      String
+  platformPostId String
+  url           String?
+  job           Job         @relation(fields: [jobId], references: [id])
+  createdAt     DateTime    @default(now())
+}
+
+model PlatformToken {
+  id            String   @id @default(cuid())
+  userId        String
+  platform      String
+  accessToken   String
+  refreshToken  String?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, platform])
+}
+
+model AdCampaign {
+  id              String   @id @default(cuid())
+  userId          String
+  publishedPostId String
+  platform        String
+  campaignId      String
+  objective       String?
+  durationDays    Int      @default(0)
+  budget          Float    @default(0)
+  spend           Float    @default(0)
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  user            User     @relation(fields: [userId], references: [id])
+  publishedPost   PublishedPostGroup @relation(fields: [publishedPostId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Analytics {
+  id              String   @id @default(cuid())
+  userId          String
+  publishedPostId String
+  platform        String
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  shares          Int      @default(0)
+  comments        Int      @default(0)
+  clicks          Int      @default(0)
+  reach           Int      @default(0)
+  user            User     @relation(fields: [userId], references: [id])
+  publishedPost   PublishedPostGroup @relation(fields: [publishedPostId], references: [id])
+  capturedAt      DateTime @default(now())
+
+  @@index([platform, capturedAt])
+}
