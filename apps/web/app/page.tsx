@@ -93,6 +93,8 @@ type SubscriptionSnapshot = {
 export default function HomePage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [authBusy, setAuthBusy] = useState(false);
   const [personFile, setPersonFile] = useState<File | null>(null);
   const [productFile, setProductFile] = useState<File | null>(null);
@@ -505,7 +507,7 @@ export default function HomePage() {
     }
   }
 
-  async function signInWithEmail() {
+  async function handleAuth() {
     setError(null);
     setInfo(null);
     const client = getSupabaseBrowserClient();
@@ -513,22 +515,33 @@ export default function HomePage() {
       setError('Supabase public keys are not configured in environment variables.');
       return;
     }
-
-    if (!authEmail.trim()) {
-      setError('Enter an email to sign in.');
+    if (!authEmail.trim()) { setError('Enter your email.'); return; }
+    if (!authPassword.trim()) { setError('Enter your password.'); return; }
+    if (authMode === 'signup' && authPassword.length < 6) {
+      setError('Password must be at least 6 characters.');
       return;
     }
 
     setAuthBusy(true);
-    const { error: signInError } = await client.auth.signInWithOtp({ email: authEmail.trim() });
-    setAuthBusy(false);
-
-    if (signInError) {
-      setError(signInError.message);
-      return;
+    if (authMode === 'signin') {
+      const { error: signInError } = await client.auth.signInWithPassword({
+        email: authEmail.trim(),
+        password: authPassword,
+      });
+      setAuthBusy(false);
+      if (signInError) { setError(signInError.message); return; }
+      setInfo('Signed in successfully.');
+    } else {
+      const { error: signUpError } = await client.auth.signUp({
+        email: authEmail.trim(),
+        password: authPassword,
+      });
+      setAuthBusy(false);
+      if (signUpError) { setError(signUpError.message); return; }
+      setInfo('Account created! You can now sign in.');
+      setAuthMode('signin');
     }
-
-    setInfo('Magic link sent. Check your email to complete sign in.');
+    setAuthPassword('');
   }
 
   async function signOut() {
@@ -1458,16 +1471,28 @@ export default function HomePage() {
           <input
             type="email"
             value={authEmail}
-            onChange={(event) => setAuthEmail(event.target.value)}
-            placeholder="you@company.com"
+            onChange={(e) => setAuthEmail(e.target.value)}
+            placeholder="you@example.com"
+            style={{ marginBottom: 6 }}
           />
-          <div className="job-actions">
-            <button type="button" className="chip" onClick={signInWithEmail} disabled={authBusy}>
-              {authBusy ? 'Sending...' : 'Email Sign In'}
+          <input
+            type="password"
+            value={authPassword}
+            onChange={(e) => setAuthPassword(e.target.value)}
+            placeholder="Password"
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAuth(); }}
+          />
+          <div className="job-actions" style={{ marginTop: 8 }}>
+            <button type="button" className={`chip${authMode === 'signin' ? ' active' : ''}`} onClick={() => setAuthMode('signin')}>Sign In</button>
+            <button type="button" className={`chip${authMode === 'signup' ? ' active' : ''}`} onClick={() => setAuthMode('signup')}>Sign Up</button>
+          </div>
+          <div className="job-actions" style={{ marginTop: 6 }}>
+            <button type="button" className="chip active" onClick={handleAuth} disabled={authBusy}>
+              {authBusy ? 'Please wait…' : authMode === 'signin' ? 'Sign In' : 'Create Account'}
             </button>
-            <button type="button" className="chip" onClick={signOut}>
-              Sign Out
-            </button>
+            {session && (
+              <button type="button" className="chip" onClick={signOut}>Sign Out</button>
+            )}
           </div>
         </div>
         <nav>
