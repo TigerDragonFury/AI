@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { z } from 'zod';
 import { addPublishedPost } from '../../../../../lib/platform-store';
 import { updateJobStatus } from '../../../../../lib/jobs-repository';

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { getJobById, updateJobStatus } from '../../../../../../lib/jobs-repository';
 import { enqueueRegeneration } from '../../../../../../lib/queue-client';
 import { requireRequestUser } from '../../../../../../lib/request-auth';

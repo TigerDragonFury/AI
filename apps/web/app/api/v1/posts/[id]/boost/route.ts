@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { z } from 'zod';
 import { addCampaign, getPublishedPostById } from '../../../../../../lib/platform-store';
 import { enqueueAdsBoost } from '../../../../../../lib/queue-client';

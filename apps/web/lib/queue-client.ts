@@ -1,16 +1,17 @@
 import { Queue } from 'bullmq';
 import type { JobRecord } from '@packages/shared';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const parsedUrl = new URL(redisUrl);
-
-const connection = {
-  host: parsedUrl.hostname,
-  port: Number(parsedUrl.port || 6379),
-  username: parsedUrl.username || undefined,
-  password: parsedUrl.password || undefined,
-  maxRetriesPerRequest: null as null
-};
+function getConnection() {
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const parsedUrl = new URL(redisUrl);
+  return {
+    host: parsedUrl.hostname,
+    port: Number(parsedUrl.port || 6379),
+    username: parsedUrl.username || undefined,
+    password: parsedUrl.password || undefined,
+    maxRetriesPerRequest: null as null
+  };
+}
 
 let videoProcessingQueue: Queue | null = null;
 let aiGenerationQueue: Queue | null = null;
@@ -21,42 +22,42 @@ let mediaValidationQueue: Queue | null = null;
 
 function getVideoProcessingQueue() {
   if (!videoProcessingQueue) {
-    videoProcessingQueue = new Queue('video_processing', { connection });
+    videoProcessingQueue = new Queue('video_processing', { connection: getConnection() });
   }
   return videoProcessingQueue;
 }
 
 function getMediaValidationQueue() {
   if (!mediaValidationQueue) {
-    mediaValidationQueue = new Queue('media_validation', { connection });
+    mediaValidationQueue = new Queue('media_validation', { connection: getConnection() });
   }
   return mediaValidationQueue;
 }
 
 function getAiGenerationQueue() {
   if (!aiGenerationQueue) {
-    aiGenerationQueue = new Queue('ai_generation', { connection });
+    aiGenerationQueue = new Queue('ai_generation', { connection: getConnection() });
   }
   return aiGenerationQueue;
 }
 
 function getAnalyticsSyncQueue() {
   if (!analyticsSyncQueue) {
-    analyticsSyncQueue = new Queue('analytics_sync', { connection });
+    analyticsSyncQueue = new Queue('analytics_sync', { connection: getConnection() });
   }
   return analyticsSyncQueue;
 }
 
 function getAdsBoostQueue() {
   if (!adsBoostQueue) {
-    adsBoostQueue = new Queue('ads_boost', { connection });
+    adsBoostQueue = new Queue('ads_boost', { connection: getConnection() });
   }
   return adsBoostQueue;
 }
 
 function getSocialPublishingQueue() {
   if (!socialPublishingQueue) {
-    socialPublishingQueue = new Queue('social_publishing', { connection });
+    socialPublishingQueue = new Queue('social_publishing', { connection: getConnection() });
   }
   return socialPublishingQueue;
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { createJobSchema } from '@packages/shared';
 import { createJob } from '../../../../../lib/jobs-repository';
 import { enqueueNewJob } from '../../../../../lib/queue-client';

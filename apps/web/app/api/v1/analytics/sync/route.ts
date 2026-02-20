@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { listPublishedPostsByUser } from '../../../../../lib/platform-store';
 import { requireRequestUser } from '../../../../../lib/request-auth';
 import { enqueueAnalyticsSync } from '../../../../../lib/queue-client';
