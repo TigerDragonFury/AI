@@ -122,6 +122,14 @@ export default function HomePage() {
   const [previewJob, setPreviewJob] = useState<JobRecord | null>(null);
   const [editCaption, setEditCaption] = useState('');
 
+  // Convert Supabase storage path → public URL
+  function storageUrl(path?: string): string | undefined {
+    if (!path) return undefined;
+    if (path.startsWith('http')) return path;
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    return `${base}/storage/v1/object/public/${path}`;
+  }
+
   // Boost modal
   const [boostTarget, setBoostTarget] = useState<PublishedPost | null>(null);
   const [boostBudget, setBoostBudget] = useState('50');
@@ -1108,36 +1116,74 @@ export default function HomePage() {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto', padding: '24px 0'
           }}
+          onClick={(e) => { if (e.target === e.currentTarget) setPreviewJob(null); }}
         >
-          <div style={{ background: '#1e293b', borderRadius: 12, padding: 24, maxWidth: 800, width: '90%', border: '1px solid #334155' }}>
+          <div style={{ background: '#1e293b', borderRadius: 12, padding: 24, maxWidth: 860, width: '92%', border: '1px solid #334155' }}>
+            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ margin: 0 }}>Ad Preview — Ready for Approval</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <h2 style={{ margin: 0 }}>Job Preview</h2>
+                <span style={{
+                  padding: '2px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+                  background: previewJob.status === 'published' ? '#166534' : previewJob.status === 'awaiting_approval' ? '#3730a3' : previewJob.status === 'processing' ? '#92400e' : '#1e3a5f',
+                  color: '#e2e8f0'
+                }}>{previewJob.status}</span>
+              </div>
               <button type="button" onClick={() => setPreviewJob(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 20 }}>✕</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+
+            {/* Images row */}
+            <div style={{ display: 'grid', gridTemplateColumns: previewJob.productPhotoUrl ? '1fr 1fr 1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              {/* Source */}
               <div>
-                <p className="label-title">Original Source</p>
-                {previewJob.personSourceUrl ? (
+                <p className="label-title" style={{ margin: '0 0 6px' }}>Source ({previewJob.personSourceType})</p>
+                <p style={{ margin: '0 0 6px', fontSize: 12, color: '#64748b' }}>{previewJob.personSourceName}</p>
+                {storageUrl(previewJob.personSourceUrl) ? (
                   previewJob.personSourceType === 'video'
-                    ? <video src={previewJob.personSourceUrl} controls style={{ width: '100%', borderRadius: 8 }} />
-                    : <img src={previewJob.personSourceUrl} alt="source" style={{ width: '100%', borderRadius: 8, objectFit: 'cover' }} />
+                    ? <video src={storageUrl(previewJob.personSourceUrl)} controls style={{ width: '100%', borderRadius: 8 }} />
+                    : <img src={storageUrl(previewJob.personSourceUrl)} alt="source" style={{ width: '100%', borderRadius: 8, objectFit: 'cover', maxHeight: 200 }} />
                 ) : (
-                  <div style={{ height: 200, background: '#0f172a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>No preview</div>
+                  <div style={{ height: 160, background: '#0f172a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13 }}>No file URL</div>
                 )}
               </div>
+
+              {/* Product photo (if any) */}
+              {previewJob.productPhotoUrl && (
+                <div>
+                  <p className="label-title" style={{ margin: '0 0 6px' }}>Product Photo</p>
+                  <p style={{ margin: '0 0 6px', fontSize: 12, color: '#64748b' }}>{previewJob.productPhotoName ?? ''}</p>
+                  <img src={storageUrl(previewJob.productPhotoUrl)} alt="product" style={{ width: '100%', borderRadius: 8, objectFit: 'cover', maxHeight: 200 }} />
+                </div>
+              )}
+
+              {/* Generated output */}
               <div>
-                <p className="label-title">Generated Ad</p>
+                <p className="label-title" style={{ margin: '0 0 6px' }}>Generated Ad</p>
+                <p style={{ margin: '0 0 6px', fontSize: 12, color: '#64748b' }}>AI output</p>
                 {previewJob.generatedVideoUrl ? (
-                  <video src={previewJob.generatedVideoUrl} controls style={{ width: '100%', borderRadius: 8 }} />
+                  <video src={storageUrl(previewJob.generatedVideoUrl)} controls style={{ width: '100%', borderRadius: 8 }} />
                 ) : (
-                  <div style={{ height: 200, background: '#0f172a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>Generating…</div>
+                  <div style={{ height: 160, background: '#0f172a', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13, gap: 6 }}>
+                    <span>{previewJob.status === 'processing' ? '⏳ Generating…' : previewJob.status === 'failed' ? '❌ Generation failed' : '⏸ Not yet generated'}</span>
+                    {previewJob.errorMessage && <span style={{ color: '#f87171', fontSize: 11, textAlign: 'center', padding: '0 8px' }}>{previewJob.errorMessage}</span>}
+                  </div>
                 )}
               </div>
             </div>
+
+            {/* Caption generated by AI */}
+            {previewJob.caption && (
+              <div style={{ marginBottom: 12, padding: '10px 14px', background: '#0f172a', borderRadius: 8, border: '1px solid #1e3a5f' }}>
+                <p className="label-title" style={{ margin: '0 0 4px' }}>AI-Generated Caption</p>
+                <p style={{ margin: 0, color: '#cbd5e1', fontSize: 14, lineHeight: 1.5 }}>{previewJob.caption}</p>
+              </div>
+            )}
+
+            {/* Editable caption */}
             <label>
-              <span className="label-title">Caption / Description</span>
+              <span className="label-title">Caption to Publish (editable)</span>
               <textarea
                 value={editCaption}
                 onChange={(e) => setEditCaption(e.target.value)}
@@ -1146,10 +1192,18 @@ export default function HomePage() {
                 placeholder="Edit caption before publishing…"
               />
             </label>
-            <div className="job-actions" style={{ marginTop: 12 }}>
+
+            {/* Details */}
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', margin: '10px 0 14px', fontSize: 13, color: '#94a3b8' }}>
+              {previewJob.tone && <span>Tone: <strong style={{ color: '#cbd5e1' }}>{previewJob.tone}</strong></span>}
+              {previewJob.targetPlatforms.length > 0 && <span>Platforms: <strong style={{ color: '#cbd5e1' }}>{previewJob.targetPlatforms.join(', ')}</strong></span>}
+              <span>Created: <strong style={{ color: '#cbd5e1' }}>{new Date(previewJob.createdAt).toLocaleString()}</strong></span>
+            </div>
+
+            <div className="job-actions">
               <button type="button" className="chip active" onClick={approveFromPreview}>Approve &amp; Queue Publish</button>
               <button type="button" className="chip" onClick={regenerateFromPreview}>Regenerate</button>
-              <button type="button" className="chip" onClick={() => setPreviewJob(null)}>Later</button>
+              <button type="button" className="chip" onClick={() => setPreviewJob(null)}>Close</button>
             </div>
           </div>
         </div>
@@ -1504,7 +1558,7 @@ export default function HomePage() {
             <div className="jobs-list">
               {jobs.map((job) => {
                 const isWatched = watchedJobId === job.id;
-                const canPreview = job.status === 'awaiting_approval';
+                const canPreview = true;
                 const statusColor =
                   job.status === 'failed' ? '#ef4444'
                   : job.status === 'published' ? '#22c55e'
