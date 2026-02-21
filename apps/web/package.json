@@ -12,7 +12,8 @@
   "dependencies": {
     "@packages/shared": "0.1.0",
     "@sentry/nextjs": "^10.39.0",
-    "@supabase/supabase-js": "2.49.1",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.97.0",
     "bullmq": "^5.0.0",
     "next": "^16.1.6",
     "react": "19.0.0",
