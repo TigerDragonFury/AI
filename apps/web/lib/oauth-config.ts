@@ -8,7 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 
-const APP_URL = process.env.APP_URL ?? 'https://ai-api-delta.vercel.app';
+const APP_URL = (process.env.APP_URL ?? 'https://ai-api-delta.vercel.app').replace(/\/$/, '');
 
 export const PLATFORM_OAUTH_CONFIGS = {
   tiktok: {
