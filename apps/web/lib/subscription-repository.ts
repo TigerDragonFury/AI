@@ -15,8 +15,8 @@ export type SubscriptionSnapshot = {
 };
 
 const limitsByPlan: Record<PlanType, number | null> = {
-  free: 3,
-  starter: 20,
+  free: 100,
+  starter: 200,
   pro: null
 };
 
