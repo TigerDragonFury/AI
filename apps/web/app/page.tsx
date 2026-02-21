@@ -1115,8 +1115,37 @@ export default function HomePage() {
 
   async function approveFromPreview() {
     if (!previewJob) return;
-    await updateStatus(previewJob.id, 'approve');
-    setPreviewJob(null);
+    setWorking(true);
+    setError(null);
+    try {
+      // 1. Save edited caption
+      await fetch(`/api/v1/jobs/${previewJob.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
+        body: JSON.stringify({ caption: editCaption })
+      });
+      // 2. Publish directly — no worker needed
+      const res = await fetch('/api/v1/posts/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
+        body: JSON.stringify({
+          jobId: previewJob.id,
+          platforms: previewJob.targetPlatforms.length ? previewJob.targetPlatforms : ['TikTok']
+        })
+      });
+      if (!res.ok) {
+        const e = await res.json() as { error?: string };
+        setError(e.error ?? 'Could not publish job.');
+        return;
+      }
+      setInfo('Post published successfully!');
+      setPreviewJob(null);
+      await refreshDashboardData();
+    } catch {
+      setError('Failed to publish job.');
+    } finally {
+      setWorking(false);
+    }
   }
 
   async function regenerateFromPreview() {
@@ -1644,7 +1673,7 @@ export default function HomePage() {
                         <button
                           type="button"
                           className="chip active"
-                          onClick={() => { setPreviewJob(job); setEditCaption(job.productDescription ?? ''); }}
+                          onClick={() => { setPreviewJob(job); setEditCaption(job.caption ?? job.productDescription ?? ''); }}
                         >
                           Preview &amp; Approve
                         </button>
