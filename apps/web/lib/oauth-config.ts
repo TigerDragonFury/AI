@@ -14,7 +14,9 @@ export const PLATFORM_OAUTH_CONFIGS = {
   tiktok: {
     authUrl: 'https://www.tiktok.com/v2/auth/authorize',
     clientKey: process.env.TIKTOK_CLIENT_KEY ?? '',
-    scope: 'user.info.basic,video.list,video.publish',
+    // video.list and video.publish require explicit approval in TikTok Developer Portal
+    // Enable them under: Products → Login Kit → Scopes, then add them back here
+    scope: 'user.info.basic',
     callbackPath: '/api/v1/oauth/tiktok/callback'
   },
   meta: {
