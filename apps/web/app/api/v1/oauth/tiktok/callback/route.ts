@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseCookieClient, getSupabaseServerClient, isSupabaseConfigured } from '../../../../../../lib/supabase-server';
+import { getSupabaseServerClient, isSupabaseConfigured } from '../../../../../../lib/supabase-server';
 import { storePlatformToken } from '../../../../../../lib/platform-tokens-repository';
 
 const APP_URL = (process.env.APP_URL ?? 'https://ai-api-delta.vercel.app').replace(/\/$/, '');
@@ -27,22 +27,36 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/?error=no_code', APP_URL));
   }
 
-  // --- Get the current user from the browser session cookie ---
+  // --- Get the current user from the state parameter (contains encoded access token) ---
   let userId: string | null = null;
+  const stateParam = searchParams.get('state');
 
   if (isSupabaseConfigured()) {
-    try {
-      const cookieClient = await getSupabaseCookieClient();
-      if (cookieClient) {
-        const { data: { user } } = await cookieClient.auth.getUser();
-        userId = user?.id ?? null;
+    let userToken: string | null = null;
+    if (stateParam) {
+      try {
+        const decoded = JSON.parse(Buffer.from(stateParam, 'base64url').toString('utf8'));
+        userToken = decoded.token ?? null;
+      } catch {
+        console.warn('[TikTok OAuth] Failed to decode state param');
       }
-    } catch (err) {
-      console.error('[TikTok OAuth] Failed to read session from cookies:', err);
     }
 
-    if (!userId) {
-      console.warn('[TikTok OAuth] No authenticated user found in session.');
+    if (!userToken) {
+      console.warn('[TikTok OAuth] No token in state param.');
+      return NextResponse.redirect(new URL('/?error=unauthorized', APP_URL));
+    }
+
+    try {
+      const client = getSupabaseServerClient();
+      const { data, error } = await client.auth.getUser(userToken);
+      if (error || !data.user) {
+        console.warn('[TikTok OAuth] Token validation failed:', error?.message);
+        return NextResponse.redirect(new URL('/?error=unauthorized', APP_URL));
+      }
+      userId = data.user.id;
+    } catch (err) {
+      console.error('[TikTok OAuth] Failed to validate token:', err);
       return NextResponse.redirect(new URL('/?error=unauthorized', APP_URL));
     }
   } else {

@@ -47,17 +47,26 @@ export const PLATFORM_OAUTH_CONFIGS = {
 
 export type OAuthPlatform = keyof typeof PLATFORM_OAUTH_CONFIGS;
 
-export function buildOAuthStartUrl(platform: OAuthPlatform): string | null {
+export function buildOAuthStartUrl(platform: OAuthPlatform, userToken?: string): string | null {
   const config = PLATFORM_OAUTH_CONFIGS[platform];
   if (!config.clientKey) return null;
 
   const redirectUri = `${APP_URL}${config.callbackPath}`;
+
+  // Encode the user token in `state` so the callback can identify the user
+  // without relying on cookies (browser-redirect flow has no Authorization header)
+  const state = userToken
+    ? Buffer.from(JSON.stringify({ token: userToken })).toString('base64url')
+    : undefined;
+
   const params = new URLSearchParams({
     client_id: config.clientKey,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: config.scope
   });
+
+  if (state) params.set('state', state);
 
   // TikTok uses `client_key` instead of `client_id`
   if (platform === 'tiktok') {
@@ -70,12 +79,13 @@ export function buildOAuthStartUrl(platform: OAuthPlatform): string | null {
 
 /**
  * Generic GET handler usable by each platform start route.
- * Redirects to the platform's authorization URL or returns an error
- * if the required env var is not set.
+ * Reads the optional `token` query param (Supabase access token from the browser)
+ * and embeds it in the OAuth `state` so the callback can identify the user.
  */
 export function makeOAuthStartHandler(platform: OAuthPlatform) {
-  return async function GET(_req: NextRequest) {
-    const url = buildOAuthStartUrl(platform);
+  return async function GET(req: NextRequest) {
+    const userToken = req.nextUrl.searchParams.get('token') ?? undefined;
+    const url = buildOAuthStartUrl(platform, userToken);
     if (!url) {
       return NextResponse.json(
         { error: `${platform} OAuth is not configured. Set the required env vars.` },

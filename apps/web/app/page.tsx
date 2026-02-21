@@ -442,6 +442,12 @@ export default function HomePage() {
     await fetchConnectedTokens();
   }
 
+  function connectPlatform(platformName: string) {
+    const token = session?.access_token;
+    const base = `/api/v1/oauth/${platformName}/start`;
+    window.location.href = token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  }
+
   async function refreshDashboardData() {
     await Promise.all([
       fetchJobs(),
@@ -1419,9 +1425,14 @@ export default function HomePage() {
                         {connected ? (
                           <span style={{ color: '#22c55e', fontSize: 13 }}>● Connected</span>
                         ) : (
-                          <a href={`/api/v1/oauth/${p}/start`} className="chip" style={{ textDecoration: 'none', fontSize: 12, padding: '4px 12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => connectPlatform(p)}
+                            className="chip"
+                            style={{ fontSize: 12, padding: '4px 12px' }}
+                          >
                             Connect
-                          </a>
+                          </button>
                         )}
                       </div>
                     );
@@ -1847,7 +1858,8 @@ export default function HomePage() {
                       </div>
                       <div className="job-actions">
                         <a
-                          href={`/api/v1/oauth/${p}/start`}
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); connectPlatform(p); }}
                           className="chip"
                           style={{ textDecoration: 'none', display: 'inline-block' }}
                         >
