@@ -730,6 +730,21 @@ export default function HomePage() {
     await refreshDashboardData();
   }
 
+  async function deleteJob(jobId: string) {
+    if (!confirm('Delete this job? This cannot be undone.')) return;
+    setError(null);
+    const response = await fetch(`/api/v1/jobs/${jobId}`, {
+      method: 'DELETE',
+      headers: await getAuthHeaders()
+    });
+    if (!response.ok) {
+      setError('Could not delete this job.');
+      return;
+    }
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    if (previewJob?.id === jobId) setPreviewJob(null);
+  }
+
   async function publishJob(job: JobRecord) {
     setWorking(true);
     setError(null);
@@ -1224,6 +1239,7 @@ export default function HomePage() {
             <div className="job-actions">
               <button type="button" className="chip active" onClick={approveFromPreview}>Approve &amp; Queue Publish</button>
               <button type="button" className="chip" onClick={regenerateFromPreview}>Regenerate</button>
+              <button type="button" className="chip" style={{ color: '#f87171' }} onClick={() => { deleteJob(previewJob.id); setPreviewJob(null); }}>Delete</button>
               <button type="button" className="chip" onClick={() => setPreviewJob(null)}>Close</button>
             </div>
           </div>
@@ -1641,6 +1657,9 @@ export default function HomePage() {
                           Watch Live
                         </button>
                       )}
+                      <button type="button" className="chip" style={{ color: '#f87171' }} onClick={() => deleteJob(job.id)}>
+                        Delete
+                      </button>
                     </div>
                   </article>
                 );

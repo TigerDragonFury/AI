@@ -160,6 +160,30 @@ export async function updateJobCaption(
     .eq('user_id', userId);
 }
 
+export async function deleteJob(id: string, userId: string): Promise<boolean> {
+  const memoryIndex = memoryJobs.findIndex((job) => job.id === id && job.userId === userId);
+  if (memoryIndex !== -1) {
+    memoryJobs.splice(memoryIndex, 1);
+  }
+
+  if (!isSupabaseConfigured()) {
+    return memoryIndex !== -1;
+  }
+
+  const client = getSupabaseServerClient();
+  if (!client) {
+    return memoryIndex !== -1;
+  }
+
+  const { error } = await client
+    .from('jobs')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  return !error;
+}
+
 export async function getJobById(id: string, userId: string): Promise<JobRecord | undefined> {
   const memoryHit = memoryJobs.find((job) => job.id === id && job.userId === userId);
 
