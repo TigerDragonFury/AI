@@ -10,13 +10,18 @@ import { storePlatformToken } from '../../../../../../lib/platform-tokens-reposi
  * the callback params and redirects back to the dashboard.
  */
 export async function GET(req: NextRequest) {
+  const code = req.nextUrl.searchParams.get('code');
+  const error = req.nextUrl.searchParams.get('error');
+
+  // TikTok reachability probe — no params present, just confirm the URL is live
+  if (!code && !error) {
+    return new NextResponse('OK', { status: 200 });
+  }
+
   const authResult = await requireRequestUser(req);
   if (!authResult.ok) {
     return NextResponse.redirect(new URL('/?error=unauthorized', req.url));
   }
-
-  const code = req.nextUrl.searchParams.get('code');
-  const error = req.nextUrl.searchParams.get('error');
 
   if (error) {
     console.warn(`[TikTok OAuth] User denied or error: ${error}`);
