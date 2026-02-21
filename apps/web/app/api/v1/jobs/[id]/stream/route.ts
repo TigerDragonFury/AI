@@ -88,7 +88,7 @@ export async function GET(request: Request, { params }: Params) {
             controller.enqueue(sseMessage('status', { jobId: id, status: job.status, job }));
 
             // Terminal states — close stream
-            if (job.status === 'published' || job.status === 'failed') {
+            if (job.status === 'awaiting_approval' || job.status === 'published' || job.status === 'failed') {
               clearInterval(interval);
               setTimeout(() => {
                 if (!closed) {

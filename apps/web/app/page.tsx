@@ -272,7 +272,9 @@ export default function HomePage() {
 
         if (data.status === 'awaiting_approval') {
           setPreviewJob(data.job);
-          setEditCaption(data.job.productDescription ?? '');
+          setEditCaption(data.job.caption ?? data.job.productDescription ?? '');
+          setWatchedJobId(null);
+          setTimeout(() => setStatusBanner(null), 3000);
         }
 
         if (data.status === 'published' || data.status === 'failed') {
