@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { createJobSchema } from '@packages/shared';
 import { createJob, updateJobCaption } from '../../../../../lib/jobs-repository';
-import { enqueueNewJob } from '../../../../../lib/queue-client';
 import { requireRequestUser } from '../../../../../lib/request-auth';
 import { canCreateJob } from '../../../../../lib/subscription-repository';
 import { complete } from '../../../../../lib/ai-engine';
@@ -36,14 +35,16 @@ export async function POST(request: Request) {
 
   // ── Inline AI caption generation (no worker needed) ──────────────────────
   const geminiKey = process.env.GEMINI_API_KEY;
+  const { productDescription, tone, targetPlatforms, personSourceName } = parsed.data;
+  const platformList = (targetPlatforms ?? []).join(', ') || 'social media';
+  const toneStr = tone ?? 'engaging';
+  const subject = productDescription || personSourceName || 'the product';
+
+  let caption = '';
+
   if (geminiKey) {
     try {
-      const { productDescription, tone, targetPlatforms, personSourceName } = parsed.data;
-      const platformList = (targetPlatforms ?? []).join(', ') || 'social media';
-      const toneStr = tone ?? 'engaging';
-      const subject = productDescription || personSourceName || 'the product';
-
-      const caption = await complete({
+      caption = await complete({
         model: 'gemini-2.0-flash',
         messages: [
           {
@@ -58,24 +59,19 @@ export async function POST(request: Request) {
         maxTokens: 200,
         temperature: 0.8
       });
-
-      if (caption.trim()) {
-        await updateJobCaption(job.id, authResult.auth.userId, caption.trim());
-        job.caption = caption.trim();
-        job.status = 'awaiting_approval';
-      }
     } catch (aiErr) {
       console.error('[AI caption] Generation failed:', aiErr);
-      queueWarning = 'Job created but AI caption generation failed. Check GEMINI_API_KEY.';
+      queueWarning = 'AI caption generation failed — you can edit the caption manually.';
     }
   } else {
-    // Fall back to BullMQ worker if no Gemini key
-    try {
-      await enqueueNewJob(job);
-    } catch {
-      queueWarning = 'Job created, but queue enqueue failed. Ensure REDIS_URL is reachable.';
-    }
+    queueWarning = 'GEMINI_API_KEY not set — caption left blank for manual editing.';
   }
 
-  return NextResponse.json({ status: 'queued', job, queueWarning }, { status: 201 });
+  // Always move to awaiting_approval so the preview modal opens (never leave stuck in queued/processing)
+  const finalCaption = caption.trim() || subject;
+  await updateJobCaption(job.id, authResult.auth.userId, finalCaption);
+  job.caption = finalCaption;
+  job.status = 'awaiting_approval';
+
+  return NextResponse.json({ status: 'awaiting_approval', job, queueWarning }, { status: 201 });
 }

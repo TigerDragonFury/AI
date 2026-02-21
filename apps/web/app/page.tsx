@@ -702,9 +702,17 @@ export default function HomePage() {
       setPersonFile(null);
       setProductFile(null);
       setProductDescription('');
-      const created = (await response.json()) as { job: JobRecord };
-      setInfo('Job created. Processing started.');
-      setWatchedJobId(created.job.id);
+      const created = (await response.json()) as { job: JobRecord; queueWarning?: string };
+      if (created.queueWarning) setInfo(created.queueWarning);
+      setJobs((prev) => [created.job, ...prev.filter((j) => j.id !== created.job.id)]);
+      // If already awaiting_approval (inline generation), open preview directly
+      if (created.job.status === 'awaiting_approval') {
+        setPreviewJob(created.job);
+        setEditCaption(created.job.caption ?? created.job.productDescription ?? '');
+      } else {
+        setInfo('Job created. Processing started.');
+        setWatchedJobId(created.job.id);
+      }
       await refreshDashboardData();
     } catch {
       setError('Failed to submit job.');
